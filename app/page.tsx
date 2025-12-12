@@ -105,7 +105,6 @@ export default function Home() {
       new Intl.DateTimeFormat("en-US", {
         hour: "numeric",
         minute: "2-digit",
-        second: "2-digit",
         hour12: true,
       }).format(now),
     [now],
@@ -159,49 +158,44 @@ export default function Home() {
   }, [fetchWeather]);
 
   return (
-    <section className="w-full max-w-3xl mx-auto flex flex-col gap-3 py-4">
-      <div className="grid gap-3 md:grid-cols-2">
+    <section className="w-full max-w-md mx-auto flex flex-col gap-2 py-2 px-2">
+      <div className="grid gap-2 grid-cols-2">
         <Card className="border border-default-100 bg-content1">
-          <CardBody className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-default-500">Time</p>
-            <p className="text-4xl font-bold leading-tight">{formattedTime}</p>
-            <p className="text-default-500 text-sm">{formattedDate}</p>
+          <CardBody className="flex flex-col gap-1 py-2 px-3">
+            <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Time</p>
+            <p className="text-2xl font-bold leading-tight">{formattedTime}</p>
+            <p className="text-default-500 text-[0.65rem]">{formattedDate}</p>
           </CardBody>
         </Card>
 
         <Card className="border border-default-100 bg-content1">
-          <CardBody className="flex items-center gap-3 py-3 px-4">
-            <div className="text-5xl" aria-hidden>
+          <CardBody className="flex items-center gap-2 py-2 px-3">
+            <div className="text-3xl" aria-hidden>
               {weather.icon}
             </div>
             <div className="flex flex-col">
-              <p className="text-xs uppercase tracking-[0.2em] text-default-500">Weather</p>
-              <p className="text-3xl font-bold">
+              <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Weather</p>
+              <p className="text-2xl font-bold">
                 {weather.temperature !== null ? `${weather.temperature.toFixed(0)}°F` : "--"}
               </p>
-              <p className="text-default-500 text-sm">{weather.condition}</p>
-              <p className="text-default-400 text-xs">Updated {weather.updated ?? "--"}</p>
+              <p className="text-default-500 text-xs">{weather.condition}</p>
               {weatherError ? (
                 <p className="text-danger text-xs">{weatherError}</p>
               ) : null}
             </div>
-            <Spacer x={1} />
-            <Button size="sm" variant="flat" isLoading={loadingWeather} onPress={fetchWeather}>
-              Refresh
-            </Button>
           </CardBody>
         </Card>
       </div>
 
       <Card className="border border-default-100 bg-content1">
-        <CardBody className="flex items-center justify-between gap-3 py-4 px-4">
+        <CardBody className="flex items-center justify-between gap-2 py-2 px-3">
           <div className="flex items-center gap-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-default-500">Master</p>
-            <span className="text-default-500 text-sm">{allOn ? "All On" : anyOn ? "Mixed" : "All Off"}</span>
+            <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Master</p>
+            <span className="text-default-500 text-xs">{allOn ? "All On" : anyOn ? "Mixed" : "All Off"}</span>
           </div>
           <Switch
             size="lg"
-            className="scale-[1.6]"
+            className="scale-[1.4]"
             color={allOn ? "success" : "default"}
             isSelected={allOn}
             onValueChange={handleMasterToggle}
@@ -211,19 +205,19 @@ export default function Home() {
         </CardBody>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-2 grid-cols-2">
         {LIGHTS.map((light) => {
           const isOn = lights[light.key];
           return (
             <Card key={light.key} className="border border-default-100 bg-content1">
-              <CardBody className="flex items-center justify-between gap-3 py-4 px-4">
-                <div className="flex items-center gap-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-default-500">{light.label}</p>
-                  <span className="text-default-500 text-sm">{isOn ? "On" : "Off"}</span>
+              <CardBody className="flex items-center justify-between gap-2 py-2 px-3">
+                <div className="flex items-center gap-2">
+                  <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">{light.label}</p>
+                  <span className="text-default-500 text-xs">{isOn ? "On" : "Off"}</span>
                 </div>
                 <Switch
                   size="lg"
-                  className="scale-[1.6]"
+                  className="scale-[1.4]"
                   color={isOn ? "success" : "default"}
                   isSelected={isOn}
                   onValueChange={(value) => handleLightToggle(light.key, value)}
