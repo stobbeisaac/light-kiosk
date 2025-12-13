@@ -43,13 +43,19 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
       {...getBaseProps({
         className: clsx(
           "px-px transition-opacity hover:opacity-80 cursor-pointer",
+          "outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
           className,
           classNames?.base,
         ),
       })}
+      style={{ outline: "none", boxShadow: "none" } as any}
     >
       <VisuallyHidden>
-        <input {...getInputProps()} />
+        <input
+          {...getInputProps()}
+          className="outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
+          style={{ outline: "none", boxShadow: "none" }}
+        />
       </VisuallyHidden>
       <div
         {...getWrapperProps()}
@@ -65,10 +71,12 @@ export const ThemeSwitch: FC<ThemeSwitchProps> = ({
               "pt-px",
               "px-0",
               "mx-0",
+              "outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
             ],
             classNames?.wrapper,
           ),
         })}
+        style={{ outline: "none", boxShadow: "none" }}
       >
         {!isSelected || isSSR ? (
           <SunFilledIcon size={22} />

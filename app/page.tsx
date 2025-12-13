@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
+import { Icon } from "@iconify/react";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Switch } from "@heroui/switch";
 import { Divider } from "@heroui/divider";
@@ -37,39 +38,21 @@ const WEATHER_TEXT: Record<number, string> = {
 };
 
 const WEATHER_ICON: Record<number, string> = {
-  0: "☀️",
-  1: "🌤️",
-  2: "⛅",
-  3: "☁️",
-  45: "🌫️",
-  48: "🌫️",
-  51: "🌦️",
-  53: "🌦️",
-  55: "🌧️",
-  61: "🌧️",
-  63: "🌧️",
-  65: "🌧️",
-  71: "❄️",
-  80: "🌦️",
-  95: "⛈️",
-};
-
-const WEATHER_ICON_NIGHT: Record<number, string> = {
-  0: "🌙",
-  1: "🌙",
-  2: "☁️",
-  3: "☁️",
-  45: "🌫️",
-  48: "🌫️",
-  51: "🌧️",
-  53: "🌧️",
-  55: "🌧️",
-  61: "🌧️",
-  63: "🌧️",
-  65: "🌧️",
-  71: "❄️",
-  80: "🌦️",
-  95: "⛈️",
+  0: "clear",
+  1: "mostly-clear",
+  2: "partly",
+  3: "cloudy",
+  45: "fog",
+  48: "fog",
+  51: "rain-light",
+  53: "rain",
+  55: "rain",
+  61: "rain",
+  63: "rain",
+  65: "rain",
+  71: "snow",
+  80: "rain",
+  95: "storm",
 };
 
 type WeatherState = {
@@ -168,12 +151,18 @@ export default function Home() {
     return nowTs < sun.sunriseTs || nowTs > sun.sunsetTs;
   }, [now, sun.sunriseTs, sun.sunsetTs]);
 
-  const displayWeatherIcon = useMemo(() => {
-    if (isNight && weather.code !== null) {
-      return WEATHER_ICON_NIGHT[weather.code] ?? "🌙";
-    }
-    return weather.icon;
-  }, [isNight, weather.code, weather.icon]);
+  const weatherIconName = useMemo(() => {
+    const kind = weather.code !== null ? WEATHER_ICON[weather.code] ?? "cloudy" : "cloudy";
+    if (kind === "clear" || kind === "mostly-clear") return isNight ? "meteocons:clear-night-fill" : "meteocons:clear-day-fill";
+    if (kind === "partly") return isNight ? "meteocons:partly-cloudy-night-fill" : "meteocons:partly-cloudy-day-fill";
+    if (kind === "cloudy") return "meteocons:cloudy-fill";
+    if (kind === "fog") return "meteocons:fog-fill";
+    if (kind === "rain-light") return "meteocons:drizzle-fill";
+    if (kind === "rain") return "meteocons:rain-fill";
+    if (kind === "snow") return "meteocons:snow-fill";
+    if (kind === "storm") return "meteocons:storm-fill";
+    return isNight ? "meteocons:partly-cloudy-night-fill" : "meteocons:partly-cloudy-day-fill";
+  }, [isNight, weather.code]);
 
   const fetchWeather = useCallback(async () => {
     setLoadingWeather(true);
@@ -330,7 +319,7 @@ export default function Home() {
     <section className="w-full max-w-md mx-auto flex flex-col gap-2 py-2 px-2">
       <div className="grid gap-2 grid-cols-2">
         <Card className="border border-default-100 bg-content1">
-          <CardBody className="flex flex-col gap-1 py-2 px-3">
+          <CardBody className="flex flex-col items-center justify-center gap-1 py-4 px-3 text-center">
             <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Time</p>
             <p className="text-2xl font-bold leading-tight">{formattedTime}</p>
             <p className="text-default-500 text-[0.65rem]">{formattedDate}</p>
@@ -338,11 +327,11 @@ export default function Home() {
         </Card>
 
         <Card className="border border-default-100 bg-content1">
-          <CardBody className="flex items-center gap-2 py-2 px-3">
-            <div className="text-3xl" aria-hidden>
-              {displayWeatherIcon}
+          <CardBody className="flex items-center gap-2 py-3 px-3">
+            <div className="w-11 h-11 text-foreground" aria-hidden>
+              <Icon icon={weatherIconName} width={44} height={44} />
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col items-center text-center">
               <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Weather</p>
               <p className="text-2xl font-bold">
                 {weather.temperature !== null ? `${weather.temperature.toFixed(0)}°F` : "--"}
@@ -357,7 +346,7 @@ export default function Home() {
       </div>
 
       <Card className="border border-default-100 bg-content1">
-        <CardBody className="flex items-center justify-between gap-2 py-2 px-3">
+        <CardBody className="flex items-center justify-between gap-2 py-3 px-3">
           <div className="flex items-center gap-2">
             <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Master</p>
             <span className="text-default-500 text-xs">{allOn ? "All On" : anyOn ? "Mixed" : "All Off"}</span>
@@ -379,7 +368,7 @@ export default function Home() {
           const isOn = lights[light.key];
           return (
             <Card key={light.key} className="border border-default-100 bg-content1">
-              <CardBody className="flex items-center justify-between gap-2 py-2 px-3">
+              <CardBody className="flex items-center justify-between gap-2 py-3 px-3">
                 <div className="flex items-center gap-2">
                   <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">{light.label}</p>
                   <span className="text-default-500 text-xs">{isOn ? "On" : "Off"}</span>
@@ -429,9 +418,11 @@ export default function Home() {
           </CardBody>
         </Card>
         <Card className="border border-default-100 bg-content1">
-          <CardBody className="flex items-center justify-between py-2 px-3">
+          <CardBody className="flex items-center justify-between py-3 px-3">
             <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Theme</p>
-            <ThemeSwitch className="scale-125" />
+            <div className="flex items-center justify-center h-full">
+              <ThemeSwitch className="scale-125" />
+            </div>
           </CardBody>
         </Card>
       </div>
@@ -559,23 +550,17 @@ function DayNightCycle({
           {sunriseLabel ?? "--"}
         </text>
 
-        {/* Sun/Moon icon */}
-        {isDay ? (
-          <circle cx={sunX} cy={sunY} r={9} fill="#FDB813" stroke="#fff" strokeWidth={2.5} />
-        ) : (
-          <g>
-            <circle
-              cx={sunX}
-              cy={sunY}
-              r={9}
-              fill={isLightMode ? "#cfd8e3" : "#E5E7EB"}
-              stroke={isLightMode ? "#94a3b8" : "#fff"}
-              strokeWidth={2.5}
-            />
-            <circle cx={sunX + 3.5} cy={sunY - 2} r={8} fill={isLightMode ? "#475569" : "#1f2937"} />
-          </g>
-        )}
+        {/* Position indicator dot (theme-aware for visibility) */}
+        <circle
+          cx={sunX}
+          cy={sunY}
+          r={4}
+          fill={isLightMode ? "#0f172a" : "#f8fafc"}
+          stroke={isLightMode ? "#0f172a" : "#e5e7eb"}
+          strokeWidth={2}
+        />
       </svg>
     </div>
   );
 }
+
