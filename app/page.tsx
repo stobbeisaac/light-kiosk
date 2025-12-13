@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTheme } from "next-themes";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Switch } from "@heroui/switch";
 import { Divider } from "@heroui/divider";
@@ -53,10 +54,29 @@ const WEATHER_ICON: Record<number, string> = {
   95: "⛈️",
 };
 
+const WEATHER_ICON_NIGHT: Record<number, string> = {
+  0: "🌙",
+  1: "🌙",
+  2: "☁️",
+  3: "☁️",
+  45: "🌫️",
+  48: "🌫️",
+  51: "🌧️",
+  53: "🌧️",
+  55: "🌧️",
+  61: "🌧️",
+  63: "🌧️",
+  65: "🌧️",
+  71: "❄️",
+  80: "🌦️",
+  95: "⛈️",
+};
+
 type WeatherState = {
   temperature: number | null;
   condition: string;
   icon: string;
+  code: number | null;
   updated: string | null;
 };
 
@@ -74,6 +94,9 @@ type NextEvent = {
 } | null;
 
 export default function Home() {
+  const { resolvedTheme } = useTheme();
+  const isLightMode = resolvedTheme === "light";
+
   const [lights, setLights] = useState<Record<LightKey, boolean>>({
     living: false,
     kitchen: false,
@@ -86,6 +109,7 @@ export default function Home() {
     temperature: null,
     condition: "Loading…",
     icon: "⏳",
+    code: null,
     updated: null,
   });
   const [weatherError, setWeatherError] = useState<string | null>(null);
@@ -138,6 +162,19 @@ export default function Home() {
     [now],
   );
 
+  const isNight = useMemo(() => {
+    if (!sun.sunriseTs || !sun.sunsetTs) return false;
+    const nowTs = now.getTime();
+    return nowTs < sun.sunriseTs || nowTs > sun.sunsetTs;
+  }, [now, sun.sunriseTs, sun.sunsetTs]);
+
+  const displayWeatherIcon = useMemo(() => {
+    if (isNight && weather.code !== null) {
+      return WEATHER_ICON_NIGHT[weather.code] ?? "🌙";
+    }
+    return weather.icon;
+  }, [isNight, weather.code, weather.icon]);
+
   const fetchWeather = useCallback(async () => {
     setLoadingWeather(true);
     setWeatherError(null);
@@ -161,6 +198,7 @@ export default function Home() {
         temperature,
         condition,
         icon,
+        code,
         updated: new Date().toLocaleTimeString(),
       });
     } catch (error) {
@@ -302,7 +340,7 @@ export default function Home() {
         <Card className="border border-default-100 bg-content1">
           <CardBody className="flex items-center gap-2 py-2 px-3">
             <div className="text-3xl" aria-hidden>
-              {weather.icon}
+              {displayWeatherIcon}
             </div>
             <div className="flex flex-col">
               <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Weather</p>
@@ -364,7 +402,14 @@ export default function Home() {
       {/* Day/Night Cycle - Full Width */}
       <Card className="border border-default-100 bg-content1">
         <CardBody className="py-2 px-2">
-          <DayNightCycle now={now} sunriseTs={sun.sunriseTs} sunsetTs={sun.sunsetTs} sunriseLabel={sun.sunrise} sunsetLabel={sun.sunset} />
+          <DayNightCycle
+            now={now}
+            sunriseTs={sun.sunriseTs}
+            sunsetTs={sun.sunsetTs}
+            sunriseLabel={sun.sunrise}
+            sunsetLabel={sun.sunset}
+            isLightMode={isLightMode}
+          />
         </CardBody>
       </Card>
 
@@ -374,11 +419,11 @@ export default function Home() {
           <CardBody className="flex flex-col gap-1 py-2 px-3">
             <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Next Event</p>
             <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-semibold" style={{color: '#ffffff'}}>
+              <p className="text-sm font-semibold text-foreground">
                 {calendarEvent ? calendarEvent.title : calendarError || "No upcoming events"}
               </p>
               {calendarEvent && (
-                <p className="text-xs" style={{color: '#9ca3af'}}>{calendarEvent.when}</p>
+                <p className="text-xs text-default-500">{calendarEvent.when}</p>
               )}
             </div>
           </CardBody>
@@ -400,12 +445,14 @@ function DayNightCycle({
   sunsetTs,
   sunriseLabel,
   sunsetLabel,
+  isLightMode,
 }: {
   now: Date;
   sunriseTs: number | null;
   sunsetTs: number | null;
   sunriseLabel: string | null;
   sunsetLabel: string | null;
+  isLightMode: boolean;
 }) {
   const w = 280;
   const h = 120;
@@ -517,8 +564,15 @@ function DayNightCycle({
           <circle cx={sunX} cy={sunY} r={9} fill="#FDB813" stroke="#fff" strokeWidth={2.5} />
         ) : (
           <g>
-            <circle cx={sunX} cy={sunY} r={9} fill="#E5E7EB" stroke="#fff" strokeWidth={2.5} />
-            <circle cx={sunX + 3.5} cy={sunY - 2} r={8} fill="#1f2937" />
+            <circle
+              cx={sunX}
+              cy={sunY}
+              r={9}
+              fill={isLightMode ? "#cfd8e3" : "#E5E7EB"}
+              stroke={isLightMode ? "#94a3b8" : "#fff"}
+              strokeWidth={2.5}
+            />
+            <circle cx={sunX + 3.5} cy={sunY - 2} r={8} fill={isLightMode ? "#475569" : "#1f2937"} />
           </g>
         )}
       </svg>
