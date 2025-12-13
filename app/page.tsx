@@ -168,8 +168,8 @@ export default function Home() {
     setLoadingWeather(true);
     setWeatherError(null);
     try {
-      const latitude = 45.06989883329087; // TODO: set to your location
-      const longitude = -93.13558816922529;
+      const latitude = Number(process.env.NEXT_PUBLIC_LATITUDE ?? "0");
+      const longitude = Number(process.env.NEXT_PUBLIC_LONGITUDE ?? "0");
       const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`;
       const response = await fetch(url);
 
@@ -207,8 +207,8 @@ export default function Home() {
 
   const fetchSunriseSunset = useCallback(async () => {
     try {
-      const latitude = 45.06989883329087;
-      const longitude = -93.13558816922529;
+      const latitude = Number(process.env.NEXT_PUBLIC_LATITUDE ?? "0");
+      const longitude = Number(process.env.NEXT_PUBLIC_LONGITUDE ?? "0");
       const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=sunrise,sunset&timezone=auto`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Sun times unavailable");
