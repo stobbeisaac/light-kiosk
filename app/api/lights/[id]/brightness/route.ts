@@ -49,10 +49,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     });
 
     const topic = `${prefix}/${device}/set`;
-    const payload = JSON.stringify({ brightness: bri });
+    // Many Zigbee2MQTT devices require state ON to apply brightness
+    const payload = JSON.stringify({ state: bri > 0 ? "ON" : "OFF", brightness: bri });
     console.log("[API] Publishing to topic:", topic, "Payload:", payload);
-    client.publish(topic, payload);
-    console.log("[API] Publish complete");
+
+    await new Promise<void>((resolve, reject) => {
+      client.publish(topic, payload, (err) => {
+        if (err) {
+          console.log("[API] Publish error:", err);
+          reject(err);
+        } else {
+          console.log("[API] Publish complete");
+          resolve();
+        }
+      });
+    });
 
     client.end(true);
 

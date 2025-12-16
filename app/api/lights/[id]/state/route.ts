@@ -49,8 +49,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const topic = `${prefix}/${device}/set`;
     const payload = JSON.stringify({ state: on ? "ON" : "OFF" });
     console.log("[API] Publishing to topic:", topic, "Payload:", payload);
-    client.publish(topic, payload);
-    console.log("[API] Publish complete");
+
+    await new Promise<void>((resolve, reject) => {
+      client.publish(topic, payload, (err) => {
+        if (err) {
+          console.log("[API] Publish error:", err);
+          reject(err);
+        } else {
+          console.log("[API] Publish complete");
+          resolve();
+        }
+      });
+    });
 
     client.end(true);
 
