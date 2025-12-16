@@ -7,7 +7,7 @@ function getEnv(name: string, fallback?: string) {
   return v;
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const body = await req.json();
     let bri: number = Number(body.brightness ?? 0);
@@ -18,7 +18,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const username = process.env.MQTT_USERNAME;
     const password = process.env.MQTT_PASSWORD;
     const prefix = getEnv("Z2M_TOPIC_PREFIX", "zigbee2mqtt");
-    const device = params.id;
+    const { id } = await params;
+    const device = id;
 
     const client = mqtt.connect(brokerUrl, {
       username,
