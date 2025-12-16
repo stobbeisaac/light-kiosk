@@ -518,10 +518,10 @@ export default function Home() {
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-labelledby="brightness-title"
+            aria-labelledby="brightness-dialog-title"
           >
             <div className="flex items-center justify-between mb-3">
-              <p id="brightness-title" className="text-sm font-semibold">
+              <p id="brightness-dialog-title" className="text-sm font-semibold">
                 {LIGHTS.find((l) => l.key === selectedLightForBrightness)?.label} Brightness
               </p>
               <Button size="sm" variant="flat" onClick={closeBrightnessModal} aria-label="Close">
@@ -530,12 +530,15 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-3">
               <input
+                id="brightness-slider"
+                name="brightness"
                 type="range"
                 min={0}
                 max={254}
                 value={brightness[selectedLightForBrightness] ?? 128}
                 onChange={(e) => handleBrightnessChange(selectedLightForBrightness, Number(e.target.value))}
                 className="flex-1 accent-primary"
+                aria-labelledby="brightness-dialog-title"
               />
             </div>
           </div>
