@@ -31,6 +31,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await new Promise<void>((resolve, reject) => {
       const connectTimeout = setTimeout(() => {
         console.log("[API] Connection timeout");
+        client.end(true);
         reject(new Error("MQTT connection timeout"));
       }, 5000);
 
@@ -41,7 +42,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       });
       client.once("error", (err) => {
         clearTimeout(connectTimeout);
-        console.log("[API] MQTT error:", err);
+        console.log("[API] MQTT connection error:", err);
+        client.end(true);
         reject(err);
       });
     });
@@ -54,15 +56,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       client.publish(topic, payload, (err) => {
         if (err) {
           console.log("[API] Publish error:", err);
+          client.end(true);
           reject(err);
         } else {
           console.log("[API] Publish complete");
-          resolve();
+          client.end(() => {
+            console.log("[API] MQTT disconnected");
+            resolve();
+          });
         }
       });
     });
-
-    client.end(true);
 
     return NextResponse.json({ ok: true, topic, payload });
   } catch (e) {

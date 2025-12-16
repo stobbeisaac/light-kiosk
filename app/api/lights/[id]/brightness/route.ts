@@ -57,15 +57,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       client.publish(topic, payload, (err) => {
         if (err) {
           console.log("[API] Publish error:", err);
+          client.end(true);
           reject(err);
         } else {
           console.log("[API] Publish complete");
-          resolve();
+          client.end(() => {
+            console.log("[API] MQTT disconnected");
+            resolve();
+          });
         }
       });
     });
-
-    client.end(true);
 
     return NextResponse.json({ ok: true, topic, payload });
   } catch (e) {
