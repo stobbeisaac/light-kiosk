@@ -131,10 +131,10 @@ export default function Home() {
   const handleLightToggle = (key: LightKey, value: boolean) => {
     setLights((prev) => ({ ...prev, [key]: value }));
     const deviceEnvMap: Record<LightKey, string | undefined> = {
-      living: process.env.HUE_BULB_1,
-      kitchen: process.env.HUE_BULB_2,
-      bedroom: process.env.HUE_BULB_3,
-      porch: process.env.HUE_BULB_4,
+      living: process.env.NEXT_PUBLIC_HUE_BULB_1,
+      kitchen: process.env.NEXT_PUBLIC_HUE_BULB_2,
+      bedroom: process.env.NEXT_PUBLIC_HUE_BULB_3,
+      porch: process.env.NEXT_PUBLIC_HUE_BULB_4,
     };
     const device = deviceEnvMap[key];
     if (device) {
@@ -159,10 +159,10 @@ export default function Home() {
   const handleBrightnessChange = (key: LightKey, value: number) => {
     setBrightness((prev) => ({ ...prev, [key]: value }));
     const deviceEnvMap: Record<LightKey, string | undefined> = {
-      living: process.env.HUE_BULB_1,
-      kitchen: process.env.HUE_BULB_2,
-      bedroom: process.env.HUE_BULB_3,
-      porch: process.env.HUE_BULB_4,
+      living: process.env.NEXT_PUBLIC_HUE_BULB_1,
+      kitchen: process.env.NEXT_PUBLIC_HUE_BULB_2,
+      bedroom: process.env.NEXT_PUBLIC_HUE_BULB_3,
+      porch: process.env.NEXT_PUBLIC_HUE_BULB_4,
     };
     const device = deviceEnvMap[key];
     if (device) {
@@ -183,7 +183,7 @@ export default function Home() {
       { living: value, kitchen: value, bedroom: value, porch: value },
     );
     setLights(nextState);
-    const devices = [process.env.HUE_BULB_1, process.env.HUE_BULB_2, process.env.HUE_BULB_3, process.env.HUE_BULB_4].filter(Boolean) as string[];
+    const devices = [process.env.NEXT_PUBLIC_HUE_BULB_1, process.env.NEXT_PUBLIC_HUE_BULB_2, process.env.NEXT_PUBLIC_HUE_BULB_3, process.env.NEXT_PUBLIC_HUE_BULB_4].filter(Boolean) as string[];
     devices.forEach((dev) => {
       fetch(`/api/lights/${dev}/state`, {
         method: "POST",
