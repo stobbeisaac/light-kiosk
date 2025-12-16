@@ -86,6 +86,14 @@ export default function Home() {
     bedroom: false,
     porch: false,
   });
+  const [brightness, setBrightness] = useState<Record<LightKey, number>>({
+    living: 128,
+    kitchen: 128,
+    bedroom: 128,
+    porch: 128,
+  });
+  const [brightnessModalOpen, setBrightnessModalOpen] = useState(false);
+  const [selectedLightForBrightness, setSelectedLightForBrightness] = useState<LightKey | null>(null);
 
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherState>({
@@ -106,11 +114,64 @@ export default function Home() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (!brightnessModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeBrightnessModal();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [brightnessModalOpen]);
+
   const allOn = useMemo(() => Object.values(lights).every(Boolean), [lights]);
   const anyOn = useMemo(() => Object.values(lights).some(Boolean), [lights]);
 
   const handleLightToggle = (key: LightKey, value: boolean) => {
     setLights((prev) => ({ ...prev, [key]: value }));
+    const deviceEnvMap: Record<LightKey, string | undefined> = {
+      living: process.env.HUE_BULB_1,
+      kitchen: process.env.HUE_BULB_2,
+      bedroom: process.env.HUE_BULB_3,
+      porch: process.env.HUE_BULB_4,
+    };
+    const device = deviceEnvMap[key];
+    if (device) {
+      fetch(`/api/lights/${device}/state`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ on: value }),
+      }).catch(() => {});
+    }
+  };
+
+  const openBrightnessModal = (key: LightKey) => {
+    setSelectedLightForBrightness(key);
+    setBrightnessModalOpen(true);
+  };
+
+  const closeBrightnessModal = () => {
+    setBrightnessModalOpen(false);
+    setSelectedLightForBrightness(null);
+  };
+
+  const handleBrightnessChange = (key: LightKey, value: number) => {
+    setBrightness((prev) => ({ ...prev, [key]: value }));
+    const deviceEnvMap: Record<LightKey, string | undefined> = {
+      living: process.env.HUE_BULB_1,
+      kitchen: process.env.HUE_BULB_2,
+      bedroom: process.env.HUE_BULB_3,
+      porch: process.env.HUE_BULB_4,
+    };
+    const device = deviceEnvMap[key];
+    if (device) {
+      fetch(`/api/lights/${device}/brightness`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brightness: value }),
+      }).catch(() => {});
+    }
   };
 
   const handleMasterToggle = (value: boolean) => {
@@ -122,6 +183,14 @@ export default function Home() {
       { living: value, kitchen: value, bedroom: value, porch: value },
     );
     setLights(nextState);
+    const devices = [process.env.HUE_BULB_1, process.env.HUE_BULB_2, process.env.HUE_BULB_3, process.env.HUE_BULB_4].filter(Boolean) as string[];
+    devices.forEach((dev) => {
+      fetch(`/api/lights/${dev}/state`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ on: value }),
+      }).catch(() => {});
+    });
   };
 
   const formattedTime = useMemo(
@@ -373,7 +442,8 @@ export default function Home() {
                   <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">{light.label}</p>
                   <span className="text-default-500 text-xs">{isOn ? "On" : "Off"}</span>
                 </div>
-                <Switch
+                <div className="flex items-center gap-8">
+                  <Switch
                   size="lg"
                   className="scale-[1.4]"
                   color={isOn ? "success" : "default"}
@@ -381,7 +451,17 @@ export default function Home() {
                   onValueChange={(value) => handleLightToggle(light.key, value)}
                 >
                   {isOn ? "On" : "Off"}
-                </Switch>
+                  </Switch>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    isIconOnly
+                    onClick={() => openBrightnessModal(light.key)}
+                    aria-label="Adjust brightness"
+                  >
+                    <Icon icon="ph:sun-bold" width={18} height={18} />
+                  </Button>
+                </div>
               </CardBody>
             </Card>
           );
@@ -426,6 +506,39 @@ export default function Home() {
           </CardBody>
         </Card>
       </div>
+      {brightnessModalOpen && selectedLightForBrightness && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={closeBrightnessModal}
+        >
+          <div
+            className="max-w-sm w-[90%] rounded-lg bg-content1 p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="brightness-title"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <p id="brightness-title" className="text-sm font-semibold">
+                {LIGHTS.find((l) => l.key === selectedLightForBrightness)?.label} Brightness
+              </p>
+              <Button size="sm" variant="flat" onClick={closeBrightnessModal} aria-label="Close">
+                Close
+              </Button>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={254}
+                value={brightness[selectedLightForBrightness] ?? 128}
+                onChange={(e) => handleBrightnessChange(selectedLightForBrightness, Number(e.target.value))}
+                className="flex-1 accent-primary"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
