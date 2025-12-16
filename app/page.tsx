@@ -136,7 +136,9 @@ export default function Home() {
       bedroom: process.env.NEXT_PUBLIC_HUE_BULB_3,
       porch: process.env.NEXT_PUBLIC_HUE_BULB_4,
     };
+    console.log('Toggle - key:', key, 'deviceEnvMap:', deviceEnvMap);
     const device = deviceEnvMap[key];
+    console.log('Toggle - device:', device, 'value:', value);
     if (device) {
       fetch(`/api/lights/${device}/state`, {
         method: "POST",
