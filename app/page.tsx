@@ -10,13 +10,13 @@ import { Button } from "@heroui/button";
 import { Spacer } from "@heroui/spacer";
 import { ThemeSwitch } from "@/components/theme-switch";
 
-type LightKey = "living" | "kitchen" | "bedroom" | "porch";
+type LightKey = "living" | "kitchen" | "bed_strip" | "porch";
 
 const LIGHTS: { key: LightKey; label: string }[] = [
-  { key: "living", label: "Living" },
-  { key: "kitchen", label: "Kitchen" },
-  { key: "bedroom", label: "Bedroom" },
-  { key: "porch", label: "Porch" },
+  { key: "living", label: "Dresser Lamp" },
+  { key: "kitchen", label: "Guitar Lamp" },
+  { key: "bed_strip", label: "Bed Lights" },
+  { key: "porch", label: "Guitar Lights" },
 ];
 
 const WEATHER_TEXT: Record<number, string> = {
@@ -83,13 +83,13 @@ export default function Home() {
   const [lights, setLights] = useState<Record<LightKey, boolean>>({
     living: false,
     kitchen: false,
-    bedroom: false,
+    bed_strip: false,
     porch: false,
   });
   const [brightness, setBrightness] = useState<Record<LightKey, number>>({
     living: 128,
     kitchen: 128,
-    bedroom: 128,
+    bed_strip: 128,
     porch: 128,
   });
   const [brightnessModalOpen, setBrightnessModalOpen] = useState(false);
@@ -133,7 +133,7 @@ export default function Home() {
     const deviceEnvMap: Record<LightKey, string | undefined> = {
       living: process.env.NEXT_PUBLIC_HUE_BULB_1,
       kitchen: process.env.NEXT_PUBLIC_HUE_BULB_2,
-      bedroom: process.env.NEXT_PUBLIC_HUE_BULB_3,
+      bed_strip: process.env.NEXT_PUBLIC_HUE_BULB_3,
       porch: process.env.NEXT_PUBLIC_HUE_BULB_4,
     };
     console.log('Toggle - key:', key, 'deviceEnvMap:', deviceEnvMap);
@@ -163,7 +163,7 @@ export default function Home() {
     const deviceEnvMap: Record<LightKey, string | undefined> = {
       living: process.env.NEXT_PUBLIC_HUE_BULB_1,
       kitchen: process.env.NEXT_PUBLIC_HUE_BULB_2,
-      bedroom: process.env.NEXT_PUBLIC_HUE_BULB_3,
+      bed_strip: process.env.NEXT_PUBLIC_HUE_BULB_3,
       porch: process.env.NEXT_PUBLIC_HUE_BULB_4,
     };
     const device = deviceEnvMap[key];
@@ -182,10 +182,15 @@ export default function Home() {
         acc[light.key] = value;
         return acc;
       },
-      { living: value, kitchen: value, bedroom: value, porch: value },
+      { living: value, kitchen: value, bed_strip: value, porch: value },
     );
     setLights(nextState);
-    const devices = [process.env.NEXT_PUBLIC_HUE_BULB_1, process.env.NEXT_PUBLIC_HUE_BULB_2, process.env.NEXT_PUBLIC_HUE_BULB_3, process.env.NEXT_PUBLIC_HUE_BULB_4].filter(Boolean) as string[];
+    const devices = [
+      process.env.NEXT_PUBLIC_HUE_BULB_1,
+      process.env.NEXT_PUBLIC_HUE_BULB_2,
+      process.env.NEXT_PUBLIC_HUE_BULB_3,
+      process.env.NEXT_PUBLIC_HUE_BULB_4,
+    ].filter(Boolean) as string[];
     devices.forEach((dev) => {
       fetch(`/api/lights/${dev}/state`, {
         method: "POST",
@@ -576,26 +581,27 @@ function DayNightCycle({
 
   if (sunriseTs && sunsetTs) {
     const nowTs = now.getTime();
-    const dayLength = sunsetTs - sunriseTs;
     const fullCycle = 24 * 60 * 60 * 1000;
+    const dayDuration = Math.max(1, sunsetTs - sunriseTs);
+    const nightDuration = Math.max(1, fullCycle - dayDuration);
 
-    // Determine position in 24h cycle
+    // 0 = sunrise, 0.5 = sunset, 1.0 = next sunrise
     let cycleProgress = 0;
-    
+
     if (nowTs >= sunriseTs && nowTs <= sunsetTs) {
-      // During day: 0 to 0.5
       isDay = true;
-      cycleProgress = (nowTs - sunriseTs) / (2 * fullCycle);
+      const dayProgress = (nowTs - sunriseTs) / dayDuration; // 0..1 daytime
+      cycleProgress = dayProgress * 0.5;
     } else if (nowTs > sunsetTs) {
-      // After sunset: 0.5 to 1.0
-      cycleProgress = 0.5 + (nowTs - sunsetTs) / (2 * fullCycle);
+      const nightProgress = (nowTs - sunsetTs) / nightDuration; // 0..1 night after sunset
+      cycleProgress = 0.5 + nightProgress * 0.5;
     } else {
-      // Before sunrise: continuing from previous night
-      const nightStart = sunsetTs - fullCycle;
-      cycleProgress = 0.5 + (nowTs - nightStart) / (2 * fullCycle);
+      // Before sunrise: night segment before sunrise
+      const prevSunset = sunsetTs - fullCycle;
+      const nightProgress = (nowTs - prevSunset) / nightDuration; // 0..1 night before sunrise
+      cycleProgress = 0.5 + nightProgress * 0.5;
     }
 
-    // Position along wave
     sunX = padding + cycleProgress * waveWidth;
     sunY = baseline - amplitude * Math.sin(cycleProgress * 2 * Math.PI);
   }
