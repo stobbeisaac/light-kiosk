@@ -4,7 +4,7 @@
  * Run this server in a separate process while Next.js is running.
  */
 
-import WebSocket from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 import http from "http";
 
 const PORT = 8766; // Different port from Python daemon
@@ -28,7 +28,7 @@ const clients = new Set<WebSocket>();
 const server = http.createServer();
 
 // Create WebSocket server
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocketServer({ server });
 
 // WebSocket server receives connections from browser clients
 wss.on("connection", (ws: WebSocket) => {
