@@ -94,6 +94,7 @@ export default function Home() {
   });
   const [brightnessModalOpen, setBrightnessModalOpen] = useState(false);
   const [selectedLightForBrightness, setSelectedLightForBrightness] = useState<LightKey | null>(null);
+  const [rainbowOn, setRainbowOn] = useState(false);
 
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherState>({
@@ -196,6 +197,22 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ on: value }),
+      }).catch(() => {});
+    });
+  };
+
+  const handleRainbowToggle = (value: boolean) => {
+    setRainbowOn(value);
+    const devices = [
+      process.env.NEXT_PUBLIC_HUE_BULB_1,
+      process.env.NEXT_PUBLIC_HUE_BULB_2,
+      process.env.NEXT_PUBLIC_HUE_BULB_3,
+    ].filter(Boolean) as string[]; // Exclude porch (bulb 4)
+    devices.forEach((dev) => {
+      fetch(`/api/lights/${dev}/rainbow`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: value }),
       }).catch(() => {});
     });
   };
@@ -435,6 +452,25 @@ export default function Home() {
             onValueChange={handleMasterToggle}
           >
             {allOn ? "Off" : "On"}
+          </Switch>
+        </CardBody>
+      </Card>
+
+      {/* Rainbow Mode - excludes Guitar Lights (porch) */}
+      <Card className="border border-default-100 bg-content1">
+        <CardBody className="flex items-center justify-between gap-2 py-3 px-3">
+          <div className="flex items-center gap-2">
+            <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Rainbow</p>
+            <span className="text-default-500 text-xs">All except Guitar Lights</span>
+          </div>
+          <Switch
+            size="lg"
+            className="scale-[1.4]"
+            color={rainbowOn ? "success" : "default"}
+            isSelected={rainbowOn}
+            onValueChange={handleRainbowToggle}
+          >
+            {rainbowOn ? "On" : "Off"}
           </Switch>
         </CardBody>
       </Card>
