@@ -84,9 +84,9 @@ function connectToPythonDaemon() {
   });
 }
 
-// Start listening for browser clients
-server.listen(PORT, () => {
-  console.log(`WebSocket server running on ws://localhost:${PORT}`);
+// Start listening for browser clients (on all interfaces so Pi can connect)
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`WebSocket server running on ws://0.0.0.0:${PORT} (accessible from network)`);
   console.log("Attempting to connect to Python audio daemon on ws://localhost:8765...");
 
   // Try to connect to Python daemon

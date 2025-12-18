@@ -127,7 +127,9 @@ export default function Home() {
 
     const connectWebSocket = () => {
       try {
-        const ws = new WebSocket("ws://localhost:8766");
+        // Use environment variable for WebSocket host, fallback to localhost for local dev
+        const wsHost = process.env.NEXT_PUBLIC_WS_HOST || "localhost";
+        const ws = new WebSocket(`ws://${wsHost}:8766`);
 
         ws.onopen = () => {
           console.log("Connected to audio WebSocket");
