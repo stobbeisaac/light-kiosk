@@ -61,12 +61,14 @@ function connectToPythonDaemon() {
 
   pythonWs.on("message", (data: WebSocket.Data) => {
     try {
-      latestAudioData = JSON.parse(data.toString());
+      const textData = data.toString();
+      latestAudioData = JSON.parse(textData);
 
-      // Broadcast to all connected browser clients
+      // Broadcast to all connected browser clients as TEXT (not binary)
+      const jsonString = JSON.stringify(latestAudioData);
       clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(data);
+          client.send(jsonString);
         }
       });
     } catch (error) {
