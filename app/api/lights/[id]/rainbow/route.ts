@@ -12,6 +12,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     console.log("[API] Rainbow toggle - starting");
     const body = await req.json();
     const enabled: boolean = !!body.enabled;
+    let speedRaw = body.speed;
+    const speed: number | undefined =
+      speedRaw !== undefined && Number.isFinite(Number(speedRaw))
+        ? Number(speedRaw)
+        : undefined;
     console.log("[API] Body:", body, "Enabled:", enabled);
 
     const brokerUrl = getEnv("MQTT_URL", "mqtt://localhost:1883");
@@ -50,9 +55,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const topic = `${prefix}/${device}/set`;
     // For Hue/Zigbee2MQTT, 'effect: "colorloop"' enables rainbow; 'effect: "none"' stops it.
+    // Some devices support a non-standard 'color_loop' speed. We include it when provided.
     const payloadObj: Record<string, unknown> = enabled
       ? { state: "ON", effect: "colorloop" }
-      : { effect: "none" };
+      : { state: "ON", effect: "none" };
+    if (enabled && speed !== undefined) {
+      (payloadObj as any).color_loop = { speed };
+    }
+
+    // When disabling rainbow, set a neutral white color temp if supported
+    if (!enabled) {
+      const neutralCt = Number(process.env.RAINBOW_NEUTRAL_CT ?? 370); // mireds; ~2700K-3000K
+      (payloadObj as any).color_temp = neutralCt;
+      const neutralBriRaw = process.env.RAINBOW_NEUTRAL_BRI;
+      if (neutralBriRaw !== undefined && Number.isFinite(Number(neutralBriRaw))) {
+        (payloadObj as any).brightness = Number(neutralBriRaw);
+      }
+    }
     const payload = JSON.stringify(payloadObj);
     console.log("[API] Publishing to topic:", topic, "Payload:", payload);
 

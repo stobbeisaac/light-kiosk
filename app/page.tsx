@@ -212,7 +212,7 @@ export default function Home() {
       fetch(`/api/lights/${dev}/rainbow`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: value }),
+        body: JSON.stringify({ enabled: value, speed: value ? 100 : undefined }),
       }).catch(() => {});
     });
   };
