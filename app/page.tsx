@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useTheme } from "next-themes";
 import { Icon } from "@iconify/react";
 import { Card, CardBody, CardHeader } from "@heroui/card";
@@ -9,6 +9,7 @@ import { Divider } from "@heroui/divider";
 import { Button } from "@heroui/button";
 import { Spacer } from "@heroui/spacer";
 import { ThemeSwitch } from "@/components/theme-switch";
+import { audioToRGB, getAudioBrightness, smoothAudio, AudioData } from "@/lib/audioUtils";
 
 type LightKey = "living" | "kitchen" | "bed_strip" | "porch";
 
@@ -96,6 +97,11 @@ export default function Home() {
   const [selectedLightForBrightness, setSelectedLightForBrightness] = useState<LightKey | null>(null);
   const [rainbowOn, setRainbowOn] = useState(false);
 
+  // Audio data state
+  const [audioData, setAudioData] = useState<AudioData | null>(null);
+  const audioDataRef = useRef<AudioData | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherState>({
     temperature: null,
@@ -114,6 +120,57 @@ export default function Home() {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // WebSocket connection for audio data
+  useEffect(() => {
+    if (!rainbowOn) return;
+
+    const connectWebSocket = () => {
+      try {
+        const ws = new WebSocket("ws://localhost:8766");
+
+        ws.onopen = () => {
+          console.log("Connected to audio WebSocket");
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data: AudioData = JSON.parse(event.data);
+            audioDataRef.current = data;
+            setAudioData(data);
+          } catch (e) {
+            console.error("Error parsing audio data:", e);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+
+        ws.onclose = () => {
+          console.log("Disconnected from audio WebSocket");
+          wsRef.current = null;
+          // Attempt to reconnect
+          if (rainbowOn) {
+            setTimeout(connectWebSocket, 3000);
+          }
+        };
+
+        wsRef.current = ws;
+      } catch (error) {
+        console.error("Failed to create WebSocket:", error);
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [rainbowOn]);
 
   useEffect(() => {
     if (!brightnessModalOpen) return;
@@ -203,19 +260,65 @@ export default function Home() {
 
   const handleRainbowToggle = (value: boolean) => {
     setRainbowOn(value);
+    
+    if (value) {
+      // Rainbow mode enabled - start listening to audio
+      // Initial toggle to colorloop while audio data loads
+      const devices = [
+        process.env.NEXT_PUBLIC_HUE_BULB_1,
+        process.env.NEXT_PUBLIC_HUE_BULB_2,
+        process.env.NEXT_PUBLIC_HUE_BULB_3,
+      ].filter(Boolean) as string[];
+      
+      devices.forEach((dev) => {
+        fetch(`/api/lights/${dev}/rainbow`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: true, speed: 100 }),
+        }).catch(() => {});
+      });
+    } else {
+      // Rainbow mode disabled - reset to neutral white
+      const devices = [
+        process.env.NEXT_PUBLIC_HUE_BULB_1,
+        process.env.NEXT_PUBLIC_HUE_BULB_2,
+        process.env.NEXT_PUBLIC_HUE_BULB_3,
+      ].filter(Boolean) as string[];
+      
+      devices.forEach((dev) => {
+        fetch(`/api/lights/${dev}/rainbow`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: false }),
+        }).catch(() => {});
+      });
+    }
+  };
+
+  // Effect to send audio-based colors to lights when audio data changes
+  useEffect(() => {
+    if (!rainbowOn || !audioData) return;
+
     const devices = [
       process.env.NEXT_PUBLIC_HUE_BULB_1,
       process.env.NEXT_PUBLIC_HUE_BULB_2,
       process.env.NEXT_PUBLIC_HUE_BULB_3,
-    ].filter(Boolean) as string[]; // Exclude porch (bulb 4)
+    ].filter(Boolean) as string[];
+
+    const rgb = audioToRGB(audioData);
+    const brightness = getAudioBrightness(audioData, 1.5);
+    
+    // Convert RGB to hex color value
+    const color = (rgb.r << 16) | (rgb.g << 8) | rgb.b;
+
     devices.forEach((dev) => {
-      fetch(`/api/lights/${dev}/rainbow`, {
+      fetch(`/api/lights/${dev}/color`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: value, speed: value ? 100 : undefined }),
+        body: JSON.stringify({ color, brightness }),
       }).catch(() => {});
     });
-  };
+  }, [audioData, rainbowOn]);
 
   const formattedTime = useMemo(
     () =>
@@ -456,12 +559,14 @@ export default function Home() {
         </CardBody>
       </Card>
 
-      {/* Rainbow Mode - excludes Guitar Lights (porch) */}
+      {/* Rainbow Mode with Audio Sync - excludes Guitar Lights (porch) */}
       <Card className="border border-default-100 bg-content1">
         <CardBody className="flex items-center justify-between gap-2 py-3 px-3">
           <div className="flex items-center gap-2">
-            <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Rainbow</p>
-            <span className="text-default-500 text-xs">All except Guitar Lights</span>
+            <p className="text-[0.6rem] uppercase tracking-[0.15em] text-default-500">Audio Sync</p>
+            <span className="text-default-500 text-xs">
+              {rainbowOn ? (audioData ? "🎵 Synced" : "🔌 Connecting...") : "Off"}
+            </span>
           </div>
           <Switch
             size="lg"
