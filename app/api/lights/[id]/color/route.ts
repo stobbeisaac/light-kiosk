@@ -1,6 +1,6 @@
 /**
  * API route to set light color and brightness based on audio data
- * For Philips Hue: Uses HSV (Hue, Saturation, Value/Brightness)
+ * For Philips Hue via Zigbee2MQTT: prefer hex RGB color payload.
  */
 
 import { NextResponse } from "next/server";
@@ -12,45 +12,6 @@ function getEnv(name: string, fallback?: string) {
   return v;
 }
 
-/**
- * Convert RGB to HSV
- * Returns { hue: 0-65535, saturation: 0-254, brightness: 0-254 }
- * Philips Hue uses 0-65535 for hue (full circle)
- */
-function rgbToHsv(r: number, g: number, b: number) {
-  r = (r & 0xFF) / 255;
-  g = (g & 0xFF) / 255;
-  b = (b & 0xFF) / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const delta = max - min;
-
-  let hue = 0;
-  if (delta !== 0) {
-    if (max === r) {
-      hue = 60 * (((g - b) / delta) % 6);
-    } else if (max === g) {
-      hue = 60 * ((b - r) / delta + 2);
-    } else {
-      hue = 60 * ((r - g) / delta + 4);
-    }
-  }
-
-  if (hue < 0) hue += 360;
-
-  const saturation = max === 0 ? 0 : (delta / max) * 254;
-  const brightness = max * 254;
-
-  // Convert hue from 0-360 to 0-65535 (Philips Hue format)
-  const hueHue = Math.round((hue / 360) * 65535);
-
-  return {
-    hue: hueHue,
-    saturation: Math.round(saturation),
-    brightness: Math.round(brightness),
-  };
-}
 
 export async function POST(
   req: Request,
@@ -93,16 +54,17 @@ export async function POST(
 
     const topic = `${prefix}/${device}/set`;
 
-    // Extract RGB and convert to HSV for Philips Hue
-    const r = (color >> 16) & 0xFF;
-    const g = (color >> 8) & 0xFF;
-    const b = color & 0xFF;
-    const { hue } = rgbToHsv(r, g, b);
+    // Build payload using hex color for broad Zigbee2MQTT compatibility
+    const colorHex = `#${color.toString(16).padStart(6, "0")}`;
 
     const payloadObj: Record<string, unknown> = {
       state: "ON",
       brightness: Math.max(1, Math.min(254, brightness)),
-      hue: hue,
+      color: {
+        hex: colorHex,
+      },
+      // Use a short transition for snappier changes (club-like)
+      transition: 0.1,
     };
 
     const payload = JSON.stringify(payloadObj);

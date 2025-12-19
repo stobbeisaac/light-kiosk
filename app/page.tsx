@@ -101,6 +101,13 @@ export default function Home() {
   const [audioData, setAudioData] = useState<AudioData | null>(null);
   const audioDataRef = useRef<AudioData | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  // Club effect control refs
+  const strobeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isStrobingRef = useRef(false);
+  const lastColorSentRef = useRef<number>(0);
+  const baseAudioBrightness = 120; // Base brightness between beats
+  const strobeBrightness = 254; // Max brightness on beat
+  const strobeMs = 120; // Duration of strobe flash
 
   const [now, setNow] = useState(() => new Date());
   const [weather, setWeather] = useState<WeatherState>({
@@ -297,7 +304,7 @@ export default function Home() {
     }
   };
 
-  // Effect to send audio-based colors to lights when audio data changes
+  // Effect to send audio-based club effects: color updates + beat strobe
   useEffect(() => {
     if (!rainbowOn || !audioData) return;
 
@@ -307,19 +314,48 @@ export default function Home() {
       process.env.NEXT_PUBLIC_HUE_BULB_3,
     ].filter(Boolean) as string[];
 
-    const rgb = audioToRGB(audioData);
-    const brightness = getAudioBrightness(audioData, 1.5);
-    
-    // Convert RGB to hex color value
-    const color = (rgb.r << 16) | (rgb.g << 8) | rgb.b;
+    // Rate-limit color updates to avoid candle-like flicker; update ~5 Hz
+    const nowTs = Date.now();
+    if (nowTs - lastColorSentRef.current > 200) {
+      const rgb = audioToRGB(audioData);
+      const color = (rgb.r << 16) | (rgb.g << 8) | rgb.b;
+      devices.forEach((dev) => {
+        fetch(`/api/lights/${dev}/color`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ color, brightness: baseAudioBrightness }),
+        }).catch(() => {});
+      });
+      lastColorSentRef.current = nowTs;
+    }
 
-    devices.forEach((dev) => {
-      fetch(`/api/lights/${dev}/color`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ color, brightness }),
-      }).catch(() => {});
-    });
+    // Beat-based strobe: flash to max brightness briefly, then back to base
+    if (audioData.beat && !isStrobingRef.current) {
+      isStrobingRef.current = true;
+      // Kick to max brightness quickly
+      devices.forEach((dev) => {
+        fetch(`/api/lights/${dev}/brightness`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ brightness: strobeBrightness, transition: 0.05 }),
+        }).catch(() => {});
+      });
+
+      // Return to base brightness after strobeMs
+      if (strobeTimeoutRef.current) {
+        clearTimeout(strobeTimeoutRef.current);
+      }
+      strobeTimeoutRef.current = setTimeout(() => {
+        devices.forEach((dev) => {
+          fetch(`/api/lights/${dev}/brightness`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ brightness: baseAudioBrightness, transition: 0.1 }),
+          }).catch(() => {});
+        });
+        isStrobingRef.current = false;
+      }, strobeMs);
+    }
   }, [audioData, rainbowOn]);
 
   const formattedTime = useMemo(
