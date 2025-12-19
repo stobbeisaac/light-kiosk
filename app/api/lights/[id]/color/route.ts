@@ -97,13 +97,12 @@ export async function POST(
     const r = (color >> 16) & 0xFF;
     const g = (color >> 8) & 0xFF;
     const b = color & 0xFF;
-    const { hue, saturation } = rgbToHsv(r, g, b);
+    const { hue } = rgbToHsv(r, g, b);
 
     const payloadObj: Record<string, unknown> = {
       state: "ON",
       brightness: Math.max(1, Math.min(254, brightness)),
       hue: hue,
-      saturation: saturation,
     };
 
     const payload = JSON.stringify(payloadObj);
